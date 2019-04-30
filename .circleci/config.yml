@@ -624,6 +624,10 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - build-back-alpine:
+          filters:
+            tags:
+              only: /.*/
       - lint-back:
           requires:
             - build-back
@@ -633,6 +637,12 @@ workflows:
       - test-back:
           requires:
             - build-back
+          filters:
+            tags:
+              only: /.*/
+      - test-back-alpine:
+          requires:
+            - build-back-alpine
           filters:
             tags:
               only: /.*/
