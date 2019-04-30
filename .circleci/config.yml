@@ -117,6 +117,25 @@ jobs:
             - ~/.local
           key: v3-back-dependencies-{{ .Revision }}
 
+  build-back-alpine:
+    docker:
+      - image: python:3.6-alpine
+    working_directory: ~/marsha/src/backend
+    steps:
+      - checkout:
+          path: ~/marsha
+      - restore_cache:
+          keys:
+            - v1-back-alpine-dependencies-{{ .Revision }}
+            - v1-back-alpine-dependencies
+      - run:
+          name: Install development dependencies
+          command: pip install --user .[dev]
+      - save_cache:
+          paths:
+            - ~/.local
+          key: v1-back-alpine-dependencies-{{ .Revision }}
+
   # Build backend translations
   build-back-i18n:
     docker:
@@ -213,6 +232,51 @@ jobs:
       - restore_cache:
           keys:
             - v3-back-dependencies-{{ .Revision }}
+      # Run back-end (Django) test suite
+      #
+      # Nota bene: to run the django test suite, we need to ensure that the
+      # PostgreSQL service is up and ready. To achieve this,
+      # we wrap the command execution with dockerize, a tiny tool
+      # installed in the development image. In our case, dockerize will wait
+      # up to one minute until the database container is answering on port 5432.
+      - run:
+          name: Run tests
+          command: |
+                dockerize \
+                  -wait tcp://localhost:5432 \
+                  -timeout 60s \
+                    python manage.py test
+
+  test-back-alpine:
+    docker:
+      - image: python:3.6-alpine
+        environment:
+          DJANGO_SETTINGS_MODULE: marsha.settings
+          PYTHONPATH: /home/circleci/marsha/src/backend
+          DJANGO_CONFIGURATION: Test
+          DJANGO_SECRET_KEY: ThisIsAnExampleKeyForTestPurposeOnly
+          DJANGO_JWT_SIGNING_KEY: ThisIsAnExampleKeyForDevPurposeOnly
+          POSTGRES_HOST: localhost
+          POSTGRES_DB: marsha
+          POSTGRES_USER: marsha_user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_PORT: 5432
+          DJANGO_AWS_ACCESS_KEY_ID: aws-access-key-id
+          DJANGO_AWS_SECRET_ACCESS_KEY: aws-secret-access-key
+          DJANGO_CLOUDFRONT_DOMAIN: abc.cloudfront.net
+          DJANGO_UPDATE_STATE_SHARED_SECRETS: dummy,secret
+      - image: circleci/postgres:10.3-alpine-ram
+        environment:
+          POSTGRES_DB: marsha
+          POSTGRES_USER: marsha_user
+          POSTGRES_PASSWORD: pass
+    working_directory: ~/marsha/src/backend
+    steps:
+      - checkout:
+          path: ~/marsha
+      - restore_cache:
+          keys:
+            - v1-back-alpine-dependencies-{{ .Revision }}
       # Run back-end (Django) test suite
       #
       # Nota bene: to run the django test suite, we need to ensure that the
@@ -404,19 +468,6 @@ jobs:
       - run:
           name: Test statics location in alpine production image
           command: ./docker/tests/statics.sh marsha ${CIRCLE_SHA1}-alpine
-      - run:
-          name: Run tests
-          command: |
-            IMAGE_SUFFIX="-alpine" \
-            docker-compose \
-              -p marsha-test \
-              -f docker/compose/ci/docker-compose.yml \
-              --project-directory . \
-              run --rm app \
-                dockerize \
-                  -wait tcp://db:5432 \
-                  -timeout 60s \
-                    python manage.py test
 
   # Restore django and front POT files containing strings to translate and upload them to our
   # translation management tool
