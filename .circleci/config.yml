@@ -377,6 +377,11 @@ jobs:
       - checkout:
           path: ~/marsha
       - run:
+          name: upgrade tar command
+          command:
+            apk update
+            apk add tar
+      - run:
           name: debug step about tar command
           command: |
             which tar
