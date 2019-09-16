@@ -376,6 +376,11 @@ jobs:
     steps:
       - checkout:
           path: ~/marsha
+      - run:
+          name: debug step about tar command
+          command: |
+            which tar
+            tar --version
       - attach_workspace:
           at: ~/marsha
       - run:
@@ -546,7 +551,7 @@ workflows:
             - build-back-i18n
           filters:
             branches:
-              only: master
+              only: /.*/
 
       # DockerHub publication.
       #
