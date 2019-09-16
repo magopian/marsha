@@ -371,16 +371,11 @@ jobs:
   # translation management tool
   i18n:
     docker:
-      - image: fundocker/crowdin:2.0.27
+      - image: fundocker/crowdin:2.0.27-tar
     working_directory: ~/marsha
     steps:
       - checkout:
           path: ~/marsha
-      - run:
-          name: upgrade tar command
-          command:
-            apk update
-            apk add tar
       - run:
           name: debug step about tar command
           command: |
